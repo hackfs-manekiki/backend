@@ -6,7 +6,7 @@ steps:
         '--dockerfile',
         './Dockerfile',
         '--destination',
-        'gcr.io/$PROJECT_ID/manekiki-backend-$_ETH_NETWORK',
+        'gcr.io/$PROJECT_ID/manekiki-backend',
         '--cache',
       ]
     id: 'build'
@@ -17,9 +17,9 @@ steps:
       [
         'run',
         'deploy',
-        'manekiki-backend-$_ETH_NETWORK',
+        'manekiki-backend',
         '--image',
-        'gcr.io/$PROJECT_ID/manekiki-backend-$_ETH_NETWORK',
+        'gcr.io/$PROJECT_ID/manekiki-backend',
         '--region',
         'asia-southeast1',
         '--platform',
