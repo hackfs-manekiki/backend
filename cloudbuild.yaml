@@ -1,0 +1,29 @@
+steps:
+  # Build and push the container image
+  - name: 'gcr.io/kaniko-project/executor:v1.6.0'
+    args:
+      [
+        '--dockerfile',
+        './Dockerfile',
+        '--destination',
+        'gcr.io/$PROJECT_ID/manekiki-backend-$_ETH_NETWORK',
+        '--cache',
+      ]
+    id: 'build'
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      [
+        'run',
+        'deploy',
+        'manekiki-backend-$_ETH_NETWORK',
+        '--image',
+        'gcr.io/$PROJECT_ID/manekiki-backend-$_ETH_NETWORK',
+        '--region',
+        'asia-southeast1',
+        '--platform',
+        'managed',
+        '--allow-unauthenticated',
+      ]
+    waitFor: ['build']
