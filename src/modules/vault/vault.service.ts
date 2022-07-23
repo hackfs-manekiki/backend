@@ -1,14 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { Vault } from 'src/interfaces/vault';
+import { Vault, Member } from 'src/interfaces/vault';
+import { Request } from 'src/interfaces/request';
 import { GraphService } from './graph.service';
+import * as VaultArtifact from '../../../abis/Vault.json'
+import * as TokenArtifact from '../../../abis/IERC20.json'
+import { ethers } from 'ethers';
+import * as dayjs from 'dayjs';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class VaultService {
 
+    vaultInterface: ethers.utils.Interface
+    tokenInterface: ethers.utils.Interface
+    provider: ethers.providers.BaseProvider
+
     constructor(
+        private readonly configService: ConfigService,
         private readonly graphService: GraphService
     ) {
-
+        const uri = this.configService.get<string>('eth.uri')
+        this.provider = ethers.providers.getDefaultProvider(uri)
+        this.vaultInterface = new ethers.utils.Interface(VaultArtifact.abi)
+        this.tokenInterface = new ethers.utils.Interface(TokenArtifact.abi)
     }
 
     async getVault(address: string) {
@@ -66,15 +80,15 @@ export class VaultService {
             })
             const adminResult = await this.graphService.query(queryAdmin)
             adminResult.data.admins.forEach(v => {
-                vaultSet.add(`${v.id}`)
+                vaultSet.add(`${v.vault.id}`)
             })
             const approverResult = await this.graphService.query(queryApprover)
             approverResult.data.approvers.forEach(v => {
-                vaultSet.add(`${v.id}`)
+                vaultSet.add(`${v.vault.id}`)
             })
             const memberResult = await this.graphService.query(queryMember)
             memberResult.data.members.forEach(v => {
-                vaultSet.add(`${v.id}`)
+                vaultSet.add(`${v.vault.id}`)
             })
             // get all vault
             let vaults: Vault[] = []
@@ -83,41 +97,41 @@ export class VaultService {
                     vault(
                         id: "${v}"
                     ) {
-                      id
-                      name
-                      owner
+                        id
+                        name
+                        owner
                       admins {
-                        id
-                        name
-                      }
+                            address
+                            name
+                        }
                       approvers {
-                        id
-                        name
-                        budget
-                      }
+                            address
+                            name
+                            budget
+                        }
                       members {
-                        id
-                        name
-                      }
+                            address
+                            name
+                        }
                     }
-                  }`
+                }`
                 const vaultResult = await this.graphService.query(queryVault)
                 const admins = vaultResult.data.vault.admins.map(a => {
                     return {
-                        address: a.id,
+                        address: a.address,
                         name: a.name
                     }
                 })
                 const approvers = vaultResult.data.vault.approvers.map(ap => {
                     return {
-                        address: ap.id,
+                        address: ap.address,
                         name: ap.name,
                         budget: ap.budget
                     }
                 })
                 const members = vaultResult.data.vault.members.map(m => {
                     return {
-                        address: m.id,
+                        address: m.address,
                         name: m.name
                     }
                 })
@@ -134,5 +148,125 @@ export class VaultService {
         } catch (err) {
             console.log(err)
         }
+    }
+
+    getAllMember(vaults: Vault[]): Record<string, Member> {
+        let memberMap: Record<string, Member> = {}
+        vaults.forEach(v => {
+            if (!memberMap[v.owner]) {
+                memberMap[v.owner] = {
+                    address: v.owner,
+                    name: ''
+                }
+            }
+            v.admins.forEach(a => {
+                if (!memberMap[a.address]) {
+                    memberMap[a.address] = a
+                }
+            })
+            v.approvers.forEach(a => {
+                if (!memberMap[a.address]) {
+                    memberMap[a.address] = {
+                        address: a.address,
+                        name: a.name
+                    }
+                }
+            })
+            v.members.forEach(a => {
+                if (!memberMap[a.address]) {
+                    memberMap[a.address] = a
+                }
+            })
+        })
+        return memberMap
+    }
+
+    async getRequest(address: string) {
+        const vaults = await this.getVault(address)
+        const members = this.getAllMember(vaults)
+        // mapping name
+        // get request per vault
+        let requests: Request[] = []
+        let rawRequests: any[] = []
+        await Promise.all(vaults.map(async (vault) => {
+            try {
+                const requestQuery = `query {
+                    requests(
+                        where: {
+                            vault: "${vault.address}"
+                        }
+                    ) {
+                        requestId
+                        requester
+                        executor
+                        isExecuted
+                        value
+                        budget
+                        input
+                        createdTxhash
+                        createdTimestamp
+                        executedTxhash
+                        executedTimestamp
+                    }
+                }`
+                const result = await this.graphService.query(requestQuery)
+                rawRequests = [...rawRequests, ...result.data.requests]
+            } catch (err) {
+                console.log(err)
+            }
+        }))
+        await Promise.all(rawRequests.map(async (req) => {
+            const input = req.input
+            const data: any = this.vaultInterface.decodeFunctionData('requestApproval', input)
+            let approverName, approveTxhash, approveTimestamp = null
+            let status = 'PENDING'
+            if (req.isExecuted) {
+                status = 'APPROVED'
+                approverName = members[req.executor]?.name || null
+                approveTxhash = req.executedTxhash
+                approveTimestamp = dayjs.unix(req.executedTimestamp).toDate()
+            }
+            let denom, rawAmount, amount, recipient, tokenAddress
+            if (data.request.requestType == 0) {
+                // eth transfer
+                recipient = data.request.to
+                denom = 'ETH'
+                rawAmount = req.value
+                amount = ethers.utils.formatEther(req.value)
+            } else {
+                // token transfer
+                const tokenInput = this.tokenInterface.decodeFunctionData('transfer', data.request.data)
+                tokenAddress = data.request.to
+                const tokenContract = new ethers.Contract(tokenAddress, TokenArtifact.abi, this.provider)
+                denom = await tokenContract.symbol()
+                const decimal = await tokenContract.decimals()
+                recipient = tokenInput.to
+                rawAmount = Number(tokenInput.amount.toString())
+                amount = Number(ethers.utils.formatUnits(tokenInput.amount, decimal))
+            }
+            const request: Request = {
+                name: data.request.name,
+                detail: data.request.detail,
+                attachment: data.request.attachments,
+                recipient,
+                requesterName: members[req.requester]?.name || null,
+                requesterAddress: req.requester,
+                requestTimestamp: dayjs.unix(req.createdTimestamp).toDate(),
+                requestTxhash: req.createdTxhash,
+                status,
+                tokenAddress,
+                denom,
+                rawAmount,
+                amount,
+                rawBudget: req.budget,
+                budget: Number(ethers.utils.formatUnits(req.budget, 'mwei').toString()),
+                approverAddress: req.executor,
+                approverName,
+                approveTxhash,
+                approveTimestamp
+            }
+            requests.push(request)
+        }))
+        return requests
     }
 }
