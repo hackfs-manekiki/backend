@@ -160,21 +160,24 @@ export class VaultService {
                 }
             }
             v.admins.forEach(a => {
-                if (!memberMap[a.address]) {
-                    memberMap[a.address] = a
+                const address = ethers.utils.getAddress(a.address)
+                if (!memberMap[address]) {
+                    memberMap[address] = a
                 }
             })
             v.approvers.forEach(a => {
-                if (!memberMap[a.address]) {
-                    memberMap[a.address] = {
-                        address: a.address,
+                const address = ethers.utils.getAddress(a.address)
+                if (!memberMap[address]) {
+                    memberMap[address] = {
+                        address: address,
                         name: a.name
                     }
                 }
             })
             v.members.forEach(a => {
-                if (!memberMap[a.address]) {
-                    memberMap[a.address] = a
+                const address = ethers.utils.getAddress(a.address)
+                if (!memberMap[address]) {
+                    memberMap[address] = a
                 }
             })
         })
@@ -218,18 +221,20 @@ export class VaultService {
         await Promise.all(rawRequests.map(async (req) => {
             const input = req.input
             const data: any = this.vaultInterface.decodeFunctionData('requestApproval', input)
-            let approverName, approveTxhash, approveTimestamp = null
+            let approverAddress, approverName, approveTxhash, approveTimestamp = null
             let status = 'PENDING'
             if (req.isExecuted) {
                 status = 'APPROVED'
-                approverName = members[req.executor]?.name || null
+                approverAddress = ethers.utils.getAddress(req.executor)
+                approverName = members[approverAddress]?.name || null
                 approveTxhash = req.executedTxhash
                 approveTimestamp = dayjs.unix(req.executedTimestamp).toDate()
             }
-            let denom, rawAmount, amount, recipient, tokenAddress
+            let denom, rawAmount, amount, recipientAddress, recipientName, tokenAddress
             if (data.request.requestType == 0) {
                 // eth transfer
-                recipient = data.request.to
+                recipientAddress = ethers.utils.getAddress(data.request.to)
+                recipientName = members[recipientAddress]?.name || null
                 denom = 'ETH'
                 rawAmount = req.value
                 amount = ethers.utils.formatEther(req.value)
@@ -240,7 +245,8 @@ export class VaultService {
                 const tokenContract = new ethers.Contract(tokenAddress, TokenArtifact.abi, this.provider)
                 denom = await tokenContract.symbol()
                 const decimal = await tokenContract.decimals()
-                recipient = tokenInput.to
+                recipientAddress = ethers.utils.getAddress(tokenInput.to)
+                recipientName = members[recipientAddress]?.name || null
                 rawAmount = Number(tokenInput.amount.toString())
                 amount = Number(ethers.utils.formatUnits(tokenInput.amount, decimal))
             }
@@ -248,7 +254,8 @@ export class VaultService {
                 name: data.request.name,
                 detail: data.request.detail,
                 attachment: data.request.attachments,
-                recipient,
+                recipientAddress,
+                recipientName,
                 requesterName: members[req.requester]?.name || null,
                 requesterAddress: req.requester,
                 requestTimestamp: dayjs.unix(req.createdTimestamp).toDate(),
@@ -260,7 +267,7 @@ export class VaultService {
                 amount,
                 rawBudget: req.budget,
                 budget: Number(ethers.utils.formatUnits(req.budget, 'mwei').toString()),
-                approverAddress: req.executor,
+                approverAddress,
                 approverName,
                 approveTxhash,
                 approveTimestamp

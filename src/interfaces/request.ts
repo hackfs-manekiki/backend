@@ -2,7 +2,8 @@ export interface Request {
     name: string
     detail: string
     attachment: string
-    recipient: string
+    recipientAddress: string
+    recipientName?: string
     requesterName: string
     requesterAddress: string
     requestTxhash: string
