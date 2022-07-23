@@ -1,7 +1,7 @@
 {
   "apps": [
     {
-      "name": "backoffice",
+      "name": "backend",
       "script": "dist/src/main.js",
       "exec_mode": "cluster",
       "instance_var": "NODE_APP_INSTANCE",

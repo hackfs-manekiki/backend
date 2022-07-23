@@ -13,17 +13,16 @@ WORKDIR /usr/src/app
 # Copying this separately prevents re-running npm install on every code change.
 COPY package.json ./
 COPY yarn.lock ./
-COPY ./backoffice/package.json ./backoffice/
+COPY ./package.json ./backend/
 # COPY ./backoffice/yarn.lock ./backoffice/
 
 # Install production dependencies.
 RUN yarn
 
 # Copy local code to the container image.
-COPY ./shared ./shared
-COPY ./backoffice ./backoffice
+COPY . ./backend
 
-WORKDIR /usr/src/app/backoffice
+WORKDIR /usr/src/app/backend
 RUN yarn build
 
 # Run the web service on container startup.
