@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Vault, Member } from 'src/interfaces/vault';
+import { Vault, Member, Role } from 'src/interfaces/vault';
 import { Request } from 'src/interfaces/request';
 import { GraphService } from './graph.service';
 import * as VaultArtifact from '../../../abis/Vault.json'
@@ -190,6 +190,37 @@ export class VaultService {
             })
         })
         return memberMap
+    }
+
+    async getRole(address: string): Promise<Role> {
+        const vaults = await this.getVault(address)
+        const adminSet = new Set<string>()
+        const ownerSet = new Set<string>()
+        const approverSet = new Set<string>()
+        const memberSet = new Set<string>()
+        vaults.forEach(v => {
+            if (v.owner == address) {
+                ownerSet.add(v.address)
+            }
+            const admins = v.admins.map(a => a.address)
+            if (admins.includes(address)) {
+                adminSet.add(v.address)
+            }
+            const approvers = v.approvers.map(a => a.address)
+            if (approvers.includes(address)) {
+                approverSet.add(v.address)
+            }
+            const members = v.members.map(m => m.address)
+            if (members.includes(address)) {
+                memberSet.add(v.address)
+            }
+        })
+        return {
+            owner: [...ownerSet],
+            admins: [...adminSet],
+            approvers: [...approverSet],
+            members: [...memberSet]
+        }
     }
 
     async getRequest(address: string) {

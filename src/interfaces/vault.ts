@@ -20,3 +20,10 @@ export interface Approver {
     name: string
     budget: number
 }
+
+export interface Role {
+    owner: string[]
+    admins: string[]
+    approvers: string[]
+    members: string[]
+}
