@@ -296,6 +296,7 @@ export class VaultService {
             const request: Request = {
                 vaultAddress: req.vault.id,
                 vaultName: req.vault.name,
+                requestId: req.requestId,
                 name: data.request.name,
                 detail: data.request.detail,
                 attachment: data.request.attachments,
