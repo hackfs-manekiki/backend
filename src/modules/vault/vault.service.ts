@@ -223,7 +223,7 @@ export class VaultService {
         }
     }
 
-    async getRequest(address: string) {
+    async getRequest(address: string): Promise<Request[]> {
         const vaults = await this.getVault(address)
         const members = this.getAllMember(vaults)
         // mapping name

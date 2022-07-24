@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from "@nestjs/common";
 import { VaultService } from "./vault.service";
 import { Role } from '../../interfaces/vault'
+import { Request } from '../../interfaces/request'
 
 @Controller('vault')
 export class VaultController {
@@ -36,12 +37,12 @@ export class VaultController {
     }
 
     @Get('request/:address')
-    async getRequests(@Param('address') address: string): Promise<any> {
+    async getRequests(@Param('address') address: string): Promise<Request[]> {
         return await this.vaultService.getRequest(address)
     }
 
     @Get('request/:address/pending')
-    async getPendingRequests(@Param('address') address: string): Promise<any> {
+    async getPendingRequests(@Param('address') address: string): Promise<Request[]> {
         const requests = await this.vaultService.getRequest(address)
         return requests.filter(req => req.status == 'PENDING')
     }
