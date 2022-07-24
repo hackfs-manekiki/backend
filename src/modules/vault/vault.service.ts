@@ -294,6 +294,8 @@ export class VaultService {
                 rawAmount = Number(tokenInput.amount.toString())
                 amount = Number(ethers.utils.formatUnits(tokenInput.amount, decimal))
             }
+            let requesterAddress = ethers.utils.getAddress(req.requester)
+            let requesterName = members[requesterAddress]?.name || ''
             const request: Request = {
                 vaultAddress: req.vault.id,
                 vaultName: req.vault.name,
@@ -303,8 +305,8 @@ export class VaultService {
                 attachment: data.request.attachments,
                 recipientAddress,
                 recipientName,
-                requesterName: members[req.requester]?.name || null,
-                requesterAddress: req.requester,
+                requesterName,
+                requesterAddress,
                 requestTimestamp: dayjs.unix(req.createdTimestamp).toDate(),
                 requestTxhash: req.createdTxhash,
                 status,
