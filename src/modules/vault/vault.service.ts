@@ -29,11 +29,12 @@ export class VaultService {
     }
 
     async getVault(address: string) {
+        const sanitizeAddress = ethers.utils.getAddress(address)
         let vaultSet: Set<string> = new Set<string>()
         const queryOwner = `query {
             vaults(
                 where: {
-                    owner: "${address}"
+                    owner: "${sanitizeAddress}"
                 }
             ) {
               id
@@ -43,7 +44,7 @@ export class VaultService {
         const queryAdmin = `query {
             admins(
                 where: {
-                    address: "${address}"
+                    address: "${sanitizeAddress}"
                 }
             ) {
               vault {
@@ -55,7 +56,7 @@ export class VaultService {
         const queryApprover = `query {
             approvers(
                 where: {
-                    address: "${address}"
+                    address: "${sanitizeAddress}"
                 }
             ) {
               vault {
@@ -67,7 +68,7 @@ export class VaultService {
         const queryMember = `query {
             members(
                 where: {
-                    address: "${address}"
+                    address: "${sanitizeAddress}"
                 }
             ) {
               vault {
