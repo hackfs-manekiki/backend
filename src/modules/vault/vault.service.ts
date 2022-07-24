@@ -139,9 +139,12 @@ export class VaultService {
                     }
                 })
                 // get portfolio value
-                //await this.covalentService.getBalance(vaultResult.data.vault.id)
+                const balance = await this.covalentService.getBalance(vaultResult.data.vault.id)
                 vaults.push({
                     address: vaultResult.data.vault.id,
+                    balance,
+                    income: 0,
+                    expenses: 0,
                     name: vaultResult.data.vault.name,
                     owner: vaultResult.data.vault.owner,
                     admins,
