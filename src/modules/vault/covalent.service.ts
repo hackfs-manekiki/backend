@@ -34,7 +34,12 @@ export class CovalentService {
         let usdBalance = 0
         result.data.data.items.forEach(x => {
             const formatBalance = ethers.utils.formatUnits(x.balance, x.contract_decimals)
-            usdBalance += Number(formatBalance) * x.quote_rate
+            if (x.contract_ticker_symbol == 'KiUSD') {
+                usdBalance += Number(formatBalance) * 1
+            } else {
+                usdBalance += Number(formatBalance) * x.quote_rate
+            }
+
         })
         return usdBalance
     }
