@@ -238,6 +238,10 @@ export class VaultService {
                             vault: "${vault.address}"
                         }
                     ) {
+                        vault {
+                            id
+                            name
+                        }
                         requestId
                         requester
                         executor
@@ -290,6 +294,8 @@ export class VaultService {
                 amount = Number(ethers.utils.formatUnits(tokenInput.amount, decimal))
             }
             const request: Request = {
+                vaultAddress: req.vault.id,
+                vaultName: req.vault.name,
                 name: data.request.name,
                 detail: data.request.detail,
                 attachment: data.request.attachments,

@@ -1,4 +1,6 @@
 export interface Request {
+    vaultAddress: string
+    vaultName: string
     name: string
     detail: string
     attachment: string
