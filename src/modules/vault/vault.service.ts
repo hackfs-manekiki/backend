@@ -7,6 +7,8 @@ import * as TokenArtifact from '../../../abis/IERC20.json'
 import { ethers } from 'ethers';
 import * as dayjs from 'dayjs';
 import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import { CovalentService } from './covalent.service';
 
 @Injectable()
 export class VaultService {
@@ -17,7 +19,8 @@ export class VaultService {
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly graphService: GraphService
+        private readonly graphService: GraphService,
+        private readonly covalentService: CovalentService
     ) {
         const uri = this.configService.get<string>('eth.uri')
         this.provider = ethers.providers.getDefaultProvider(uri)
@@ -135,6 +138,8 @@ export class VaultService {
                         name: m.name
                     }
                 })
+                // get portfolio value
+                //await this.covalentService.getBalance(vaultResult.data.vault.id)
                 vaults.push({
                     address: vaultResult.data.vault.id,
                     name: vaultResult.data.vault.name,
